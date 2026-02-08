@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Faiz — Cute Scientific Calculator</title>
+    <style>
+        :root{
+              --bg:#008cff;
+              --panel:#2b6df6;
+              --panel-2:#4da3ff;
+              --btn:#4aa8ff;
+              --accent:#ffffff;
+              --glass: rgba(255,255,255,0.85);
+              --shadow: 0 8px 26px rgba(43,109,246,0.12);
+              --radius:14px;
+              --gap:8px;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial}
+        body{
+            background: radial-gradient(1200px 600px at 10% 10%, #ffffff 0%, transparent 15%),
+                                    radial-gradient(1000px 400px at 90% 90%, #ffffff 0%, transparent 15%),
+                                    var(--bg);
+            display:flex;align-items:center;justify-content:center;padding:24px;
+        }
+
+        /* Splash overlay */
+        .splash{
+            position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+            background: linear-gradient(135deg,var(--panel),var(--panel-2));color:white;z-index:40;
+            transition:opacity .35s ease, transform .35s ease;opacity:1
+        }
+        .splash.hidden{opacity:0;transform:scale(.98);pointer-events:none}
+        .splash .logo{font-weight:700;font-size:20px;letter-spacing:.6px}
+        .loader{width:74px;height:8px;background:rgba(255,255,255,0.15);border-radius:999px;margin-top:18px;overflow:hidden}
+        .loader>i{display:block;height:100%;width:48%;background:linear-gradient(90deg,#fff,#9900ff);border-radius:999px;transform:translateX(-4%);animation:slide 1s linear infinite}
+        @keyframes slide{to{transform:translateX(104%)}}
+        .credit{margin-top:12px;opacity:.95;font-size:13px}
+
+        /* Card */
+        .card{width:100%;max-width:420px;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));border-radius:22px;padding:18px;box-shadow:var(--shadow);position:relative;z-index:10}
+
+        .top-row{display:flex;align-items:center;justify-content:space-between}
+        .title{font-weight:700;color:var(--panel);}
+        .mode{font-size:13px;color:#6b5ef3;background:var(--glass);padding:6px 10px;border-radius:999px}
+
+        .display{
+            margin-top:12px;background:linear-gradient(180deg,#faf8ff,#f2eeff);border-radius:14px;padding:14px 16px;text-align:right;
+            font-size:28px;color:#22123a;min-height:56px;display:flex;align-items:center;justify-content:flex-end;word-break:break-all
+        }
+
+        /* Buttons grid */
+        .pad{display:grid;gap:var(--gap);grid-template-columns:repeat(4,1fr);margin-top:14px}
+        .btn{background:transparent;border:none;padding:14px;border-radius:12px;font-size:16px;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s ease,background .12s}
+        .btn:active{transform:translateY(2px)}
+        .btn.op{background:linear-gradient(180deg,#fff,#f6f4ff);color:var(--panel)}
+        .btn.func{background:linear-gradient(180deg,var(--btn),var(--panel-2));color:white}
+        .btn.equal{background:linear-gradient(90deg,#fdfdfd,#003cff);color:#38002f;grid-column:span 2}
+        .btn.zero{grid-column:span 2}
+
+        /* Small secondary labels for Shift functions */
+        .sub{display:block;font-size:10px;opacity:.85}
+
+        /* Responsive: tighter on small phones */
+        @media (max-width:420px){
+            .card{padding:12px;border-radius:18px}
+            .display{font-size:22px;min-height:48px}
+            .btn{padding:12px;font-size:15px;border-radius:10px}
+        }
+    </style>
+</head>
+<body>
+
+    <div class="splash" id="splash">
+        <div class="logo">MADE BY Faiz <BR> Calculator</div>
+        <div class="loader" aria-hidden="true"><i></i></div>
+        <div class="credit">Made by Faiz</div>
+    </div>
+
+    <main class="card" role="application" aria-label="Calculator">
+        <div class="top-row">
+            <div class="title">Cute Scientific</div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <div class="mode" id="modeLabel">Standard</div>
+                <button class="btn op" id="openHistory" title="History" style="padding:8px 10px;font-size:14px">History</button>
+                <button class="btn op" id="openFullSci" title="More" style="padding:8px 10px;font-size:14px">Full</button>
+            </div>
+        </div>
+
+        <div class="display" id="display">0</div>
+
+        <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn op" id="clear">C</button>
+            <button class="btn op" id="back">⌫</button>
+            <button class="btn op" id="percent">%</button>
+            <button class="btn op" id="toggleSci">Sci</button>
+        </div>
+
+        <div class="pad" id="pad">
+            <!-- Row: scientific (hidden by default) -->
+            <button class="btn func" data-fn="sin" data-alt="asin(" data-shift-label="asin"><span class="sub">sin</span></button>
+            <button class="btn func" data-fn="cos" data-alt="acos(" data-shift-label="acos"><span class="sub">cos</span></button>
+            <button class="btn func" data-fn="tan" data-alt="atan(" data-shift-label="atan"><span class="sub">tan</span></button>
+            <button class="btn func" data-fn="log" data-alt="Math.pow(10," data-shift-label="10^x"><span class="sub">log</span></button>
+
+            <button class="btn op" data-in="7">7</button>
+            <button class="btn op" data-in="8">8</button>
+            <button class="btn op" data-in="9">9</button>
+            <button class="btn op" data-op="/">÷</button>
+
+            <button class="btn op" data-in="4">4</button>
+            <button class="btn op" data-in="5">5</button>
+            <button class="btn op" data-in="6">6</button>
+            <button class="btn op" data-op="*">×</button>
+
+            <button class="btn op" data-in="1">1</button>
+            <button class="btn op" data-in="2">2</button>
+            <button class="btn op" data-in="3">3</button>
+            <button class="btn op" data-op="-">−</button>
+
+            <button class="btn op zero" data-in="0">0</button>
+            <button class="btn op" data-in=".">.</button>
+            <button class="btn equal" id="equals">=</button>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
+                <button class="btn op" id="shift">Shift</button>
+                <button class="btn op" id="degToggle">Deg</button>
+                <div style="font-size:13px;color:#2b6df6">Shift toggles alternate functions</div>
+        </div>
+    </main>
+
+    <!-- History panel -->
+    <aside id="historyPanel" class="panel" aria-hidden="true">
+        <div class="panelHeader">
+            <strong>History</strong>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button id="clearHistory" class="btn op">Clear</button>
+                <button id="closeHistory" class="btn op">Close</button>
+            </div>
+        </div>
+        <div id="historyList" class="historyList"></div>
+    </aside>
+
+    <!-- Full scientific panel -->
+    <aside id="fullSciPanel" class="panel" aria-hidden="true">
+        <div class="panelHeader">
+            <strong>Scientific</strong>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button id="closeFullSci" class="btn op">Close</button>
+            </div>
+        </div>
+        <div class="pad" style="grid-template-columns:repeat(3,1fr);">
+            <button class="btn func" data-insert="Math.PI">π</button>
+            <button class="btn func" data-insert="Math.E">e</button>
+            <button class="btn func" data-insert="(">(</button>
+
+            <button class="btn func" data-insert=")">)</button>
+            <button class="btn func" data-insert="Math.log10(" title="log10">log</button>
+            <button class="btn func" data-insert="Math.log(" title="ln">ln</button>
+
+            <button class="btn func" data-insert="Math.exp(">exp</button>
+            <button class="btn func" data-insert="Math.pow(">x^y</button>
+            <button class="btn func" data-insert="Math.sqrt(" data-alt="**2" title="√">√</button>
+
+            <button class="btn func" data-insert="Math.abs(">abs</button>
+            <button class="btn func" data-insert="," title="comma"> , </button>
+            <button class="btn func" data-insert="**" title="power operator">**</button>
+
+            <button class="btn func" data-insert="fact(" title="factorial">fact</button>
+            <button class="btn func" data-insert="sinh(" title="sinh">sinh</button>
+            <button class="btn func" data-insert="cosh(" title="cosh">cosh</button>
+            <button class="btn func" data-insert="tanh(" title="tanh">tanh</button>
+        </div>
+    </aside>
+
+    <script>
+        // Elements
+        const splash = document.getElementById('splash');
+        const displayEl = document.getElementById('display');
+        const pad = document.getElementById('pad');
+        const modeLabel = document.getElementById('modeLabel');
+
+        // Panel elements (may be present)
+        const historyListEl = document.getElementById('historyList');
+        const openHistory = document.getElementById('openHistory');
+        const closeHistory = document.getElementById('closeHistory');
+        const clearHistoryBtn = document.getElementById('clearHistory');
+        const historyPanel = document.getElementById('historyPanel');
+        const openFullSci = document.getElementById('openFullSci');
+        const closeFullSci = document.getElementById('closeFullSci');
+        const fullSciPanel = document.getElementById('fullSciPanel');
+
+        // State
+        let expr = '';
+        let isSci = false;
+        let isShift = false;
+        let degMode = false;
+        let history = [];
+
+        // Global helper math functions available to the evaluator
+        window.degMode = false;
+        window.sin = x => window.degMode ? Math.sin(x * Math.PI / 180) : Math.sin(x);
+        window.cos = x => window.degMode ? Math.cos(x * Math.PI / 180) : Math.cos(x);
+        window.tan = x => window.degMode ? Math.tan(x * Math.PI / 180) : Math.tan(x);
+        window.asin = x => { const v = Math.asin(x); return window.degMode ? v * 180 / Math.PI : v };
+        window.acos = x => { const v = Math.acos(x); return window.degMode ? v * 180 / Math.PI : v };
+        window.atan = x => { const v = Math.atan(x); return window.degMode ? v * 180 / Math.PI : v };
+        window.sinh = x => (Math.exp(x)-Math.exp(-x))/2;
+        window.cosh = x => (Math.exp(x)+Math.exp(-x))/2;
+        window.tanh = x => { const e = Math.exp(2*x); return (e-1)/(e+1) };
+        window.fact = function(n){
+            if (n === undefined) return NaN;
+            const nn = Math.round(n);
+            if (Math.abs(n - nn) > 1e-9 || nn < 0) return NaN;
+            let r = 1;
+            for(let i=2;i<=nn;i++) r *= i;
+            return r;
+        };
+        window.log10 = Math.log10 ? Math.log10 : (x)=> Math.log(x)/Math.LN10;
+        window.pow = Math.pow;
+
+        // Show splash for 1s then remove
+        window.addEventListener('load', ()=>{
+            setTimeout(()=>{splash.classList.add('hidden');setTimeout(()=>splash.remove(),400)},1000);
+        });
+
+        function updateDisplay(){ displayEl.textContent = expr || '0' }
+
+        // Safer evaluator: whitelist identifiers
+        function safeEval(input){
+            // normalize operators
+            let out = String(input).replace(/×/g,'*').replace(/÷/g,'/');
+            // replace common constants
+            out = out.replace(/\bpi\b/gi, 'Math.PI').replace(/\be\b/gi, 'Math.E');
+
+            // find identifiers and ensure they're allowed
+            const allowed = new Set(['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','sqrt','ln','log10','log','abs','exp','pow','fact','Math','PI','E']);
+            const ids = out.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+            for(const id of ids){
+                if(/^(?:Math|PI|E)$/.test(id)) continue;
+                if(!allowed.has(id)) throw 'Invalid token: '+id;
+            }
+
+            // map 'ln' and 'log' to functions
+            out = out.replace(/\bln\b/g, 'Math.log');
+            out = out.replace(/\blog10\b/g, 'log10');
+            out = out.replace(/\blog\b/g, 'log10');
+
+            // evaluate in global scope (our helper functions are on window)
+            return Function('return ('+out+')')();
+        }
+
+        // pad click handler
+        pad.addEventListener('click', (e)=>{
+            const btn = e.target.closest('button'); if(!btn) return;
+            if(btn.dataset.in){ expr += btn.dataset.in; updateDisplay(); return }
+            if(btn.dataset.op){ expr += btn.dataset.op; updateDisplay(); return }
+            if(btn.dataset.fn){
+                // if Shift and button has an alternate insertion, use it
+                if(isShift && btn.dataset.alt){ expr += btn.dataset.alt; }
+                else { expr += btn.dataset.fn + '('; }
+                updateDisplay(); return;
+            }
+        });
+
+        document.getElementById('clear').addEventListener('click', ()=>{expr='';updateDisplay()});
+        document.getElementById('back').addEventListener('click', ()=>{expr=expr.slice(0,-1);updateDisplay()});
+        document.getElementById('percent').addEventListener('click', ()=>{expr += '/100';updateDisplay()});
+
+        // equals: evaluate and push to history
+        document.getElementById('equals').addEventListener('click', ()=>{
+            try{
+                const val = safeEval(expr);
+                const num = Number(val);
+                const out = Number.isFinite(num) ? String(Number(num.toFixed(12))) : String(val);
+                history.unshift({expr:expr, result: out}); if(history.length>200) history.pop();
+                renderHistory();
+                expr = out; updateDisplay();
+            } catch(err){ displayEl.textContent = 'Error'; setTimeout(()=>{expr='';updateDisplay()},900) }
+        });
+
+        // Sci quick toggle
+        document.getElementById('toggleSci').addEventListener('click', ()=>{
+            isSci = !isSci;
+            for(let i=0;i<4;i++) pad.children[i].style.display = isSci? 'block':'none';
+            modeLabel.textContent = isSci? 'Scientific':'Standard';
+        });
+
+        // Shift toggle (updates labels and enables alternate insertions)
+        document.getElementById('shift').addEventListener('click', ()=>{
+            isShift = !isShift;
+            document.body.classList.toggle('shift', isShift);
+
+            // update small pad function labels
+            document.querySelectorAll('button[data-fn]').forEach(b=>{
+                const span = b.querySelector('.sub');
+                if(!span) return;
+                if(!b.dataset.baseLabel) b.dataset.baseLabel = span.innerText;
+                const altLabel = b.dataset.shiftLabel || b.dataset.alt;
+                span.innerText = isShift && altLabel ? altLabel : b.dataset.baseLabel;
+            });
+
+            // update full scientific panel labels if they have alternates
+            document.querySelectorAll('#fullSciPanel button').forEach(b=>{
+                if(!b.dataset.baseLabel) b.dataset.baseLabel = b.textContent.trim();
+                const altLabel = b.dataset.shiftLabel || b.dataset.alt;
+                if(altLabel) b.textContent = isShift ? altLabel : b.dataset.baseLabel;
+                else b.textContent = b.dataset.baseLabel;
+            });
+        });
+
+        // Deg/Rad toggle
+        const degToggle = document.getElementById('degToggle');
+        degToggle.addEventListener('click', ()=>{
+            degMode = !degMode; window.degMode = degMode; degToggle.textContent = degMode? 'Rad':'Deg';
+        });
+
+        // start with scientific hidden on small screens
+        if(window.innerWidth < 420) document.getElementById('toggleSci').click();
+
+        // history rendering and panel controls
+        function renderHistory(){
+            if(!historyListEl) return;
+            historyListEl.innerHTML = '';
+            if(history.length===0){ historyListEl.innerHTML = '<div style="opacity:.6">No history yet</div>'; return }
+            history.forEach(h=>{
+                const el = document.createElement('div'); el.className='historyItem';
+                el.innerHTML = '<div class="historyExpr">'+h.expr+'</div><div class="historyRes">'+h.result+'</div>';
+                el.addEventListener('click', ()=>{ expr = h.expr; updateDisplay(); historyPanel.classList.remove('open') });
+                historyListEl.appendChild(el);
+            });
+        }
+
+        if(openHistory) openHistory.addEventListener('click', ()=>{ historyPanel.classList.add('open'); renderHistory() });
+        if(closeHistory) closeHistory.addEventListener('click', ()=>{ historyPanel.classList.remove('open') });
+        if(clearHistoryBtn) clearHistoryBtn.addEventListener('click', ()=>{ history = []; renderHistory() });
+
+        if(openFullSci) openFullSci.addEventListener('click', ()=>{ fullSciPanel.classList.add('open') });
+        if(closeFullSci) closeFullSci.addEventListener('click', ()=>{ fullSciPanel.classList.remove('open') });
+
+        // handle inserts from full scientific panel (respect Shift alt inserts)
+        if(fullSciPanel) fullSciPanel.addEventListener('click', (e)=>{ 
+            const btn = e.target.closest('button'); if(!btn) return; 
+            const ins = isShift && btn.dataset.alt ? btn.dataset.alt : btn.dataset.insert;
+            if(!ins) return; expr += ins; updateDisplay(); 
+        });
+
+    </script>
+    <style>
+        /* Panels (history / full sci) */
+        .panel{
+            position:fixed;right:18px;top:18px;width:320px;max-width:95vw;height:80vh;background:linear-gradient(180deg,white,#fbf9ff);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.12);padding:12px;z-index:30;transform:translateY(-8px);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+        .panel.open{opacity:1;transform:translateY(0);pointer-events:auto}
+        .panelHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+        .historyList{overflow:auto;height:calc(100% - 44px);padding-right:6px}
+        .historyItem{padding:8px;border-radius:10px;margin-bottom:8px;background:linear-gradient(180deg,#fff,#f7f5ff);cursor:pointer}
+        .historyExpr{font-size:13px;color:var(--panel)}
+        .historyRes{font-weight:700;font-size:16px;color:#22123a}
+        @media (max-width:420px){
+            .panel{left:6px;right:6px;top:auto;bottom:6px;width:auto;height:46vh;border-radius:12px}
+        }
+    </style>
+</body>
+</html>
