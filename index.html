@@ -17,12 +17,12 @@
               --gap:8px;
         }
         *{box-sizing:border-box}
-        html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial}
+        html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial;width:100%;overflow:hidden}
         body{
             background: radial-gradient(1200px 600px at 10% 10%, #ffffff 0%, transparent 15%),
                                     radial-gradient(1000px 400px at 90% 90%, #ffffff 0%, transparent 15%),
                                     var(--bg);
-            display:flex;align-items:center;justify-content:center;padding:24px;
+            display:flex;flex-direction:column;align-items:stretch;justify-content:stretch;padding:0;
         }
 
         /* Splash overlay */
@@ -39,7 +39,7 @@
         .credit{margin-top:12px;opacity:.95;font-size:13px}
 
         /* Card */
-        .card{width:100%;max-width:420px;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));border-radius:22px;padding:18px;box-shadow:var(--shadow);position:relative;z-index:10}
+        .card{width:100%;height:100%;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));border-radius:0;padding:20px;box-shadow:none;position:relative;z-index:10;display:flex;flex-direction:column;overflow-y:auto}
 
         .top-row{display:flex;align-items:center;justify-content:space-between}
         .title{font-weight:700;color:var(--panel);}
@@ -51,7 +51,7 @@
         }
 
         /* Buttons grid */
-        .pad{display:grid;gap:var(--gap);grid-template-columns:repeat(4,1fr);margin-top:14px}
+        .pad{display:grid;gap:var(--gap);grid-template-columns:repeat(4,1fr);margin-top:14px;flex:1}
         .btn{background:transparent;border:none;padding:14px;border-radius:12px;font-size:16px;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s ease,background .12s}
         .btn:active{transform:translateY(2px)}
         .btn.op{background:linear-gradient(180deg,#fff,#f6f4ff);color:var(--panel)}
@@ -85,10 +85,18 @@
                 <div class="mode" id="modeLabel">Standard</div>
                 <button class="btn op" id="openHistory" title="History" style="padding:8px 10px;font-size:14px">History</button>
                 <button class="btn op" id="openFullSci" title="More" style="padding:8px 10px;font-size:14px">Full</button>
+                <button class="btn op" id="copyBtn" title="Copy result" style="padding:8px 10px;font-size:14px">Copy</button>
             </div>
         </div>
 
         <div class="display" id="display">0</div>
+        <div style="display:flex;gap:4px;margin-top:6px;font-size:11px;color:#2b6df6;opacity:.8">
+            <button class="btn op" id="memAdd" title="M+">M+</button>
+            <button class="btn op" id="memSub" title="M-">M-</button>
+            <button class="btn op" id="memRecall" title="MR">MR</button>
+            <button class="btn op" id="memClear" title="MC">MC</button>
+            <div style="flex:1;text-align:right;padding:4px 8px" id="memDisplay">mem: 0</div>
+        </div>
 
         <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn op" id="clear">C</button>
@@ -121,7 +129,9 @@
 
             <button class="btn op zero" data-in="0">0</button>
             <button class="btn op" data-in=".">.</button>
-            <button class="btn equal" id="equals">=</button>
+            <button class="btn op" data-op="+">+</button>
+
+            <button class="btn equal" id="equals" style="grid-column:span 4">=</button>
         </div>
 
         <div style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
@@ -157,21 +167,28 @@
             <button class="btn func" data-insert="(">(</button>
 
             <button class="btn func" data-insert=")">)</button>
-            <button class="btn func" data-insert="Math.log10(" title="log10">log</button>
+            <button class="btn func" data-insert="Math.log10(" title="log10">log₁₀</button>
             <button class="btn func" data-insert="Math.log(" title="ln">ln</button>
 
+            <button class="btn func" data-insert="Math.log2(" title="log2">log₂</button>
             <button class="btn func" data-insert="Math.exp(">exp</button>
             <button class="btn func" data-insert="Math.pow(">x^y</button>
+
             <button class="btn func" data-insert="Math.sqrt(" data-alt="**2" title="√">√</button>
-
             <button class="btn func" data-insert="Math.abs(">abs</button>
-            <button class="btn func" data-insert="," title="comma"> , </button>
-            <button class="btn func" data-insert="**" title="power operator">**</button>
+            <button class="btn func" data-insert="fact(" title="factorial">n!</button>
 
-            <button class="btn func" data-insert="fact(" title="factorial">fact</button>
+            <button class="btn func" data-insert="Math.floor(" title="floor">⌊x⌋</button>
+            <button class="btn func" data-insert="Math.ceil(" title="ceil">⌈x⌉</button>
+            <button class="btn func" data-insert="Math.round(" title="round">round</button>
+
+            <button class="btn func" data-insert="Math.sign(" title="sign">sign</button>
             <button class="btn func" data-insert="sinh(" title="sinh">sinh</button>
             <button class="btn func" data-insert="cosh(" title="cosh">cosh</button>
+
             <button class="btn func" data-insert="tanh(" title="tanh">tanh</button>
+            <button class="btn func" data-insert="," title="comma"> , </button>
+            <button class="btn func" data-insert="**" title="power operator">**</button>
         </div>
     </aside>
 
@@ -198,6 +215,7 @@
         let isShift = false;
         let degMode = false;
         let history = [];
+        let memory = 0;
 
         // Global helper math functions available to the evaluator
         window.degMode = false;
@@ -227,6 +245,19 @@
         });
 
         function updateDisplay(){ displayEl.textContent = expr || '0' }
+        function updateMemDisplay(){ document.getElementById('memDisplay').textContent = 'mem: ' + (memory === 0 ? '0' : Number(memory.toFixed(6))); }
+
+        // Keyboard support
+        document.addEventListener('keydown', (e)=>{
+            const key = e.key;
+            if(/^[0-9.]$/.test(key)){ expr += key; updateDisplay(); e.preventDefault(); }
+            else if(key === '+' || key === '-' || key === '*' || key === '/'){ expr += (key === '*' ? '×' : key === '/' ? '÷' : key); updateDisplay(); e.preventDefault(); }
+            else if(key === 'Enter' || key === '='){ document.getElementById('equals').click(); e.preventDefault(); }
+            else if(key === 'Backspace'){ expr = expr.slice(0,-1); updateDisplay(); e.preventDefault(); }
+            else if(key === 'Escape' || key === 'c' || key === 'C'){ expr = ''; updateDisplay(); e.preventDefault(); }
+            else if(key === '('){ expr += '('; updateDisplay(); e.preventDefault(); }
+            else if(key === ')'){ expr += ')'; updateDisplay(); e.preventDefault(); }
+        });
 
         // Safer evaluator: whitelist identifiers
         function safeEval(input){
@@ -236,7 +267,7 @@
             out = out.replace(/\bpi\b/gi, 'Math.PI').replace(/\be\b/gi, 'Math.E');
 
             // find identifiers and ensure they're allowed
-            const allowed = new Set(['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','sqrt','ln','log10','log','abs','exp','pow','fact','Math','PI','E']);
+            const allowed = new Set(['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','sqrt','ln','log10','log','log2','abs','exp','pow','fact','floor','ceil','round','sign','Math','PI','E']);
             const ids = out.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
             for(const id of ids){
                 if(/^(?:Math|PI|E)$/.test(id)) continue;
@@ -315,6 +346,31 @@
         const degToggle = document.getElementById('degToggle');
         degToggle.addEventListener('click', ()=>{
             degMode = !degMode; window.degMode = degMode; degToggle.textContent = degMode? 'Rad':'Deg';
+        });
+
+        // Memory operations
+        document.getElementById('memAdd').addEventListener('click', ()=>{
+            try{ const val = safeEval(expr); memory += Number(val); updateMemDisplay(); expr = ''; updateDisplay(); }
+            catch(e){ displayEl.textContent = 'Error'; setTimeout(()=>{expr='';updateDisplay()},900) }
+        });
+        document.getElementById('memSub').addEventListener('click', ()=>{
+            try{ const val = safeEval(expr); memory -= Number(val); updateMemDisplay(); expr = ''; updateDisplay(); }
+            catch(e){ displayEl.textContent = 'Error'; setTimeout(()=>{expr='';updateDisplay()},900) }
+        });
+        document.getElementById('memRecall').addEventListener('click', ()=>{
+            expr = String(memory === 0 ? '0' : Number(memory.toFixed(12))); updateDisplay();
+        });
+        document.getElementById('memClear').addEventListener('click', ()=>{
+            memory = 0; updateMemDisplay();
+        });
+
+        // Copy to clipboard
+        document.getElementById('copyBtn').addEventListener('click', ()=>{
+            navigator.clipboard.writeText(displayEl.textContent).then(()=>{
+                const orig = displayEl.textContent;
+                displayEl.textContent = 'Copied!';
+                setTimeout(()=>{ displayEl.textContent = orig }, 800);
+            });
         });
 
         // start with scientific hidden on small screens
